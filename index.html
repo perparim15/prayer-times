@@ -3,162 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kohët e Namazit në Kosovë</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f0f8ff;
-        }
-
-        .container {
-            text-align: center;
-            padding: 20px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        table {
-            width: 100%;
-            margin: 20px 0;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        select {
-            padding: 10px;
-            margin: 10px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-    </style>
+    <title>Kohët e Namazit - Kosovë</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
 </head>
 <body>
     <div class="container">
-        <h1>Kohët e Namazit në Kosovë 🕌</h1>
+        <h1>🕌 Kohët e Namazit në Kosovë</h1>
         
-        <label for="cities">Zgjidh një qytet:</label>
         <select id="cities">
-            <option value="Prishtina">Prishtinë</option>
-            <option value="Prizren">Prizren</option>
-            <option value="Mitrovica">Mitrovicë</option>
-            <option value="Peja">Pejë</option>
-            <option value="Gjakova">Gjakovë</option>
+            <option value="prishtina">Prishtinë</option>
+            <option value="prizren">Prizren</option>
+            <option value="mitrovica">Mitrovicë</option>
+            <option value="peja">Pejë</option>
+            <option value="gjakova">Gjakovë</option>
         </select>
-        
+
         <div id="prayer-times"></div>
+
+        <div id="countdown">
+            <div id="timer">00:00:00</div>
+            <div id="next-prayer">Falja tjetër: <span>Dreka</span></div>
+        </div>
     </div>
 
-    <script>
-        const coordinates = {
-            "Prishtina": { lat: 42.6629, lng: 21.1655 },
-            "Prizren": { lat: 42.2139, lng: 20.7397 },
-            "Mitrovica": { lat: 42.8914, lng: 20.8660 },
-            "Peja": { lat: 42.6609, lng: 20.2884 },
-            "Gjakova": { lat: 42.3803, lng: 20.4308 }
-        };
-
-        async function getPrayerTimes(city) {
-            const { lat, lng } = coordinates[city];
-            const date = new Date().toISOString().split('T')[0];
-            
-            try {
-                const response = await fetch(
-                    `https://api.aladhan.com/v1/timings/${date}?latitude=${lat}&longitude=${lng}&method=2`
-                );
-                
-                const data = await response.json();
-                return data.data.timings;
-            } catch (error) {
-                console.error('Gabim në marrjen e të dhënave:', error);
-                return null;
-            }
-        }
-
-        async function updatePrayerTimes() {
-            const city = document.getElementById('cities').value;
-            const timings = await getPrayerTimes(city);
-
-            if (timings) {
-                const html = `
-                    <h2>${city}</h2>
-                    <table>
-                        <tr><th>Namazi</th><th>Koha</th></tr>
-                        <tr><td>Fajr</td><td>${timings.Fajr}</td></tr>
-                        <tr><td>Dreka</td><td>${timings.Dhuhr}</td></tr>
-                        <tr><td>Ikindia</td><td>${timings.Asr}</td></tr>
-                        <tr><td>Akşam</td><td>${timings.Maghrib}</td></tr>
-                        <tr><td>Jacia</td><td>${timings.Isha}</td></tr>
-                    </table>
-                `;
-
-                document.getElementById('prayer-times').innerHTML = html;
-
-                // Programo njoftimet për të gjitha kohët e namazit
-                scheduleNotifications(timings, city);
-            }
-        }
-
-        function scheduleNotifications(timings, city) {
-            const now = new Date();
-
-            // Lista e kohëve të namazit
-            const prayerTimes = [
-                { name: "Fajr", time: timings.Fajr },
-                { name: "Dreka", time: timings.Dhuhr },
-                { name: "Ikindia", time: timings.Asr },
-                { name: "Akşam", time: timings.Maghrib },
-                { name: "Jacia", time: timings.Isha }
-            ];
-
-            prayerTimes.forEach(prayer => {
-                const [hours, minutes] = prayer.time.split(':');
-                const prayerDate = new Date(
-                    now.getFullYear(),
-                    now.getMonth(),
-                    now.getDate(),
-                    hours,
-                    minutes
-                );
-
-                const timeUntilPrayer = prayerDate - now;
-
-                if (timeUntilPrayer > 0) {
-                    setTimeout(() => {
-                        new Notification(`🕋 Koha për ${prayer.name}`, {
-                            body: `Koha për ${prayer.name} në ${city} filloi në ${prayer.time}`,
-                            icon: 'https://cdn-icons-png.flaticon.com/512/2206/2206633.png'
-                        });
-                    }, timeUntilPrayer);
-                }
-            });
-        }
-
-        // Kërko leje për njoftime në fillim
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                console.log('Njoftimet janë aktivizuar!');
-            }
-        });
-
-        // Event Listeners
-        document.getElementById('cities').addEventListener('change', updatePrayerTimes);
-        
-        // Init
-        updatePrayerTimes();
-        setInterval(updatePrayerTimes, 60000); // Përditëso çdo minutë
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
