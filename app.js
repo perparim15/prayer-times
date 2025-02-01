@@ -1,19 +1,38 @@
-// Në app.js, modifiko funksionin getPrayerTimes:
+const coordinates = {
+    "prishtina": { lat: 42.6667, lng: 21.1667 }, // Prishtinë
+    "prizren": { lat: 42.2139, lng: 20.7397 },   // Prizren
+    "mitrovica": { lat: 42.8914, lng: 20.8660 }, // Mitrovicë
+    "peja": { lat: 42.6609, lng: 20.2884 },      // Pejë
+    "gjakova": { lat: 42.3803, lng: 20.4308 }    // Gjakovë
+};
+
 async function getPrayerTimes(cityKey) {
-    const { city, country } = cityMapping[cityKey];
+    const { lat, lng } = coordinates[cityKey];
+    const date = new Date().toISOString().split('T')[0];
+    
     try {
         const response = await fetch(
-            `https://api.pray.zone/v2/times/today.json?city=${city}&country=${country}&timeformat=1`
+            `https://api.aladhan.com/v1/timings/${date}?latitude=${lat}&longitude=${lng}&method=2`
         );
         const data = await response.json();
-        console.log("Të dhënat e API:", data); // Shto këtë për debug
-        return data.results.datetime[0].times;
+        return data.data.timings;
     } catch (error) {
         console.error('Gabim në marrjen e të dhënave:', error);
         return null;
     }
 }
-// Në app.js
+async function updatePrayerTimes() {
+    const city = document.getElementById("cities").value;
+    const timings = await getPrayerTimes(city);
+
+    if (timings) {
+        console.log("Të dhënat e marra:", timings); // Shiko në konsolë
+        displayPrayerTimes(timings, city);
+        startCountdown(timings);
+    } else {
+        console.log("Nuk u morën të dhëna"); // Gabim nëse API nuk përgjigjet
+    }
+}
 function startCountdown(timings) {
     if (timerInterval) clearInterval(timerInterval);
 
@@ -43,35 +62,4 @@ function startCountdown(timings) {
     }
 
     updateCountdown(nextPrayer, now);
-}
-
-function updateCountdown(nextPrayer, now) {
-    const [nextH, nextM] = nextPrayer.time.split(':');
-    let targetTime = new Date(now);
-    
-    targetTime.setHours(nextH, nextM, 0, 0);
-
-    // Nëse është nesër
-    if (targetTime < now) {
-        targetTime.setDate(targetTime.getDate() + 1);
-    }
-
-    timerInterval = setInterval(() => {
-        const diff = targetTime - new Date();
-        
-        if (diff <= 0) {
-            clearInterval(timerInterval);
-            location.reload();
-            return;
-        }
-
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-
-        document.getElementById("timer").textContent = 
-            `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
-        document.querySelector("#next-prayer span").textContent = nextPrayer.name;
-    }, 1000);
 }
